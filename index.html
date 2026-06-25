@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>מנהל משמרות פרילנסר</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --header:#1e293b;--accent:#22c55e;--accent-dark:#16a34a;--accent-bg:#f0fdf4;
+  --danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+  --bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;
+  --nav-h:64px;--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+body{font-family:system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl}
+.app{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:#fff;z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.loading-screen.hidden{display:none}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--muted)}
+
+/* HEADER */
+.header{background:var(--header);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header h1{font-size:17px;font-weight:700}
+.header-right{display:flex;align-items:center;gap:8px}
+.username-chip{font-size:13px;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-logout{background:transparent;border:1px solid #475569;color:#94a3b8;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger)}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;right:0;left:0;max-width:480px;margin:0 auto;background:var(--card);border-top:1px solid var(--border);display:flex;height:var(--nav-h);z-index:100;box-shadow:0 -2px 10px rgba(0,0,0,.08);padding-bottom:var(--safe-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;font-family:inherit;font-size:10px;color:var(--muted);padding:6px 0;transition:color .15s;min-height:48px}
+.nav-item.active{color:var(--accent)}
+.nav-item svg{width:21px;height:21px}
+
+/* PAGES */
+.page{display:none;padding:14px;padding-bottom:calc(var(--nav-h) + 20px)}
+.page.active{display:block}
+.page-title{font-size:19px;font-weight:700;margin-bottom:14px}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%)}
+.auth-card{background:var(--card);border-radius:16px;padding:28px 22px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.auth-logo{text-align:center;margin-bottom:22px}
+.logo-icon{width:60px;height:60px;background:var(--accent);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px}
+.auth-logo h2{font-size:20px;font-weight:700}
+.auth-logo p{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* FORMS */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;color:var(--text);background:#fff;transition:border-color .15s;direction:rtl}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-note{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* BUTTONS */
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-dark)}
+.btn-secondary{background:var(--border);color:var(--text)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-info{background:var(--info);color:#fff}
+.btn-sm{width:auto;padding:7px 13px;font-size:12px;border-radius:8px}
+.btn-add{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:5px}
+
+.auth-toggle{text-align:center;margin-top:14px;font-size:13px;color:var(--muted)}
+.auth-toggle a{color:var(--accent);cursor:pointer;font-weight:600;text-decoration:none}
+.error-msg{background:#fef2f2;border:1px solid #fecaca;color:var(--danger);padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.stat-card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.stat-card .s-label{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.stat-card .s-value{font-size:20px;font-weight:800;color:var(--text)}
+.s-value.green{color:var(--accent-dark)}
+.s-value.red{color:var(--danger)}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(var(--nav-h) + 14px);left:50%;transform:translateX(-50%);width:54px;height:54px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(34,197,94,.4);display:flex;align-items:center;justify-content:center;z-index:90;transition:transform .15s}
+.fab:active{transform:translateX(-50%) scale(.92)}
+.fab.hidden{display:none}
+
+/* OVERLAY / SHEET */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.overlay.active{display:flex}
+.sheet{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 18px;padding-bottom:calc(28px + var(--safe-bottom));max-height:93vh;overflow-y:auto;animation:slideUp .22s ease}
+.sheet-handle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+.sheet-title{font-size:17px;font-weight:700;margin-bottom:18px}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* COMPANY BUTTONS */
+.company-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.company-btn{padding:14px 10px;border:2px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);text-align:center;transition:all .15s;min-height:54px;line-height:1.3}
+.company-btn:hover,.company-btn.selected{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-dark)}
+
+/* PAY PREVIEW */
+.pay-preview{background:var(--accent-bg);border:1.5px solid #bbf7d0;border-radius:12px;padding:14px;margin:12px 0}
+.pay-preview .pay-label{font-size:12px;color:var(--muted);margin-bottom:2px}
+.pay-preview .pay-amount{font-size:26px;font-weight:800;color:var(--accent-dark)}
+.pay-preview .pay-breakdown{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.8}
+
+/* CARDS */
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:9px}
+.card-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-sub{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.card-amount{font-size:17px;font-weight:800;color:var(--accent-dark);white-space:nowrap}
+.card-actions{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:#dcfce7;color:#15803d}
+.badge-red{background:#fef2f2;color:#b91c1c}
+.badge-gray{background:#f1f5f9;color:var(--muted)}
+.badge-blue{background:#dbeafe;color:#1d4ed8}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty-icon{font-size:44px;margin-bottom:10px}
+.empty-state p{font-size:14px;margin-bottom:14px}
+
+/* RADIO */
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-option{display:flex;align-items:flex-start;gap:10px;padding:11px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer}
+.radio-option input[type="radio"]{margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+.radio-label{font-size:13px;font-weight:600}
+.radio-desc{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* DIVIDERS */
+.section-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;margin-top:16px}
+.divider{height:1px;background:var(--border);margin:14px 0}
+
+/* STEP INDICATOR */
+.step-indicator{display:flex;gap:7px;justify-content:center;margin-bottom:18px}
+.step-dot{width:7px;height:7px;border-radius:50%;background:var(--border)}
+.step-dot.active{background:var(--accent)}
+
+/* REPORTS */
+.report-section{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.report-section h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.report-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;border-bottom:1px solid #f8fafc}
+.report-row:last-child{border-bottom:none}
+.report-row.highlight{font-weight:700;color:var(--accent-dark)}
+
+/* FILTER */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.filter-btn{flex-shrink:0;padding:7px 14px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-family:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.filter-btn.active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-dark)}
+
+/* TABS */
+.tab-bar{display:flex;gap:2px;margin-bottom:16px;background:var(--border);border-radius:10px;padding:3px}
+.tab-btn{flex:1;padding:8px;border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--muted);border-radius:8px;cursor:pointer;transition:all .15s}
+.tab-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* OWED */
+.owed-card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:9px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.owed-company{font-size:15px;font-weight:700}
+.owed-amount{font-size:22px;font-weight:800;color:var(--danger)}
+.owed-detail{font-size:12px;color:var(--muted);margin-top:3px}
+
+.gap-row{display:flex;gap:8px}
+.mt-8{margin-top:8px}
+input[type="time"]{font-size:16px}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">טוען...</div>
+</div>
+
+<!-- AUTH -->
+<div id="authSection" style="display:none">
+  <div id="loginPage" class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-icon">
+          <svg width="34" height="34" fill="none" viewBox="0 0 24 24"><path fill="#fff" d="M12 2a5 5 0 100 10A5 5 0 0012 2zm-7 14c0-2.21 3.13-4 7-4s7 1.79 7 4v1H5v-1z"/></svg>
+        </div>
+        <h2>מנהל משמרות פרילנסר</h2>
+        <p>כניסה למערכת</p>
+      </div>
+      <div id="loginError" class="error-msg"></div>
+      <div class="form-group">
+        <label>אימייל</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email" inputmode="email">
+      </div>
+      <div class="form-group">
+        <label>סיסמה</label>
+        <input type="password" id="loginPass" placeholder="הכנס סיסמה" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">כניסה</button>
+      <div class="auth-toggle">אין לך חשבון? <a onclick="showRegister()">הרשמה</a></div>
+    </div>
+  </div>
+
+  <div id="registerPage" class="auth-wrap" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-icon">
+          <svg width="34" height="34" fill="none" viewBox="0 0 24 24"><path fill="#fff" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V8H4v2H2v2h2v2h2v-2h2v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <h2>מנהל משמרות פרילנסר</h2>
+        <p>הרשמה למערכת</p>
+      </div>
+      <div id="regError" class="error-msg"></div>
+      <div class="form-group">
+        <label>שם מלא</label>
+        <input type="text" id="regName" placeholder="שמך המלא">
+      </div>
+      <div class="form-group">
+        <label>אימייל</label>
+        <input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email" inputmode="email">
+      </div>
+      <div class="form-group">
+        <label>סיסמה (לפחות 6 תווים)</label>
+        <input type="password" id="regPass" placeholder="בחר סיסמה" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>אימות סיסמה</label>
+        <input type="password" id="regPass2" placeholder="הכנס שוב" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" id="regBtn" onclick="doRegister()">הרשמה</button>
+      <div class="auth-toggle">כבר יש לך חשבון? <a onclick="showLogin()">כניסה</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appSection" style="display:none">
+  <div class="app">
+    <div class="header">
+      <h1>⚡ מנהל משמרות</h1>
+      <div class="header-right">
+        <span class="username-chip" id="headerUser"></span>
+        <button class="btn-logout" onclick="doLogout()">יציאה</button>
+      </div>
+    </div>
+
+    <div id="pageDashboard" class="page active">
+      <div class="page-title">לוח בקרה</div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div id="owedSection"></div>
+      <div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:10px">משמרות אחרונות</div>
+        <div id="recentShiftsList"></div>
+      </div>
+    </div>
+
+    <div id="pageShifts" class="page">
+      <div class="list-header">
+        <div class="page-title" style="margin:0">משמרות</div>
+        <button class="btn-add" onclick="openShiftModal()">+ הוסף</button>
+      </div>
+      <div class="filter-bar" id="shiftsFilterBar"></div>
+      <div id="shiftsList"></div>
+    </div>
+
+    <div id="pageCompanies" class="page">
+      <div class="list-header">
+        <div class="page-title" style="margin:0">חברות</div>
+        <button class="btn-add" onclick="openCompanyModal()">+ הוסף</button>
+      </div>
+      <div id="companiesList"></div>
+    </div>
+
+    <div id="pagePayments" class="page">
+      <div class="page-title">תשלומים</div>
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabUnpaid" onclick="setPayTab('unpaid')">לא שולם</button>
+        <button class="tab-btn" id="tabPaid" onclick="setPayTab('paid')">שולם</button>
+        <button class="tab-btn" id="tabAll" onclick="setPayTab('all')">הכל</button>
+      </div>
+      <div id="paymentsList"></div>
+    </div>
+
+    <div id="pageReports" class="page">
+      <div class="page-title">דוחות</div>
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabMonthly" onclick="setReportTab('monthly')">חודשי</button>
+        <button class="tab-btn" id="tabYearly" onclick="setReportTab('yearly')">שנתי</button>
+        <button class="tab-btn" id="tabByCompany" onclick="setReportTab('company')">לפי חברה</button>
+      </div>
+      <div id="reportsContent"></div>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        בית
+      </button>
+      <button class="nav-item" id="nav-shifts" onclick="showPage('shifts')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+        משמרות
+      </button>
+      <button class="nav-item" id="nav-companies" onclick="showPage('companies')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+        חברות
+      </button>
+      <button class="nav-item" id="nav-payments" onclick="showPage('payments')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+        תשלומים
+      </button>
+      <button class="nav-item" id="nav-reports" onclick="showPage('reports')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        דוחות
+      </button>
+    </nav>
+
+    <button class="fab" id="fabBtn" onclick="openQuickShift()">+</button>
+  </div>
+</div>
+
+<!-- QUICK SHIFT -->
+<div class="overlay" id="qsOverlay" onclick="closeOverlay('qsOverlay',event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="step-indicator"><div class="step-dot active" id="qd1"></div><div class="step-dot" id="qd2"></div></div>
+    <div id="qsStep1">
+      <div class="sheet-title">הוסף משמרת מהירה — בחר חברה</div>
+      <div class="company-grid" id="qsGrid"></div>
+    </div>
+    <div id="qsStep2" style="display:none">
+      <div class="sheet-title">פרטי משמרת</div>
+      <div id="qsCompanyBadge" style="margin-bottom:12px"></div>
+      <div class="form-group"><label>תאריך</label><input type="date" id="qsDate"></div>
+      <div class="form-row">
+        <div class="form-group"><label>שעת התחלה</label><input type="time" id="qsStart" oninput="updateQsPreview()"></div>
+        <div class="form-group"><label>שעת סיום</label><input type="time" id="qsEnd" oninput="updateQsPreview()"></div>
+      </div>
+      <div class="form-group"><label>החזר דלק (₪)</label><input type="number" id="qsFuel" placeholder="0" min="0" oninput="updateQsPreview()"></div>
+      <div class="pay-preview">
+        <div class="pay-label">תשלום מחושב</div>
+        <div class="pay-amount" id="qsPayAmt">₪0</div>
+        <div class="pay-breakdown" id="qsBreakdown"></div>
+      </div>
+      <div class="gap-row">
+        <button class="btn btn-secondary" style="flex:1" onclick="qsBack()">חזרה</button>
+        <button class="btn btn-primary" style="flex:2" id="qsSaveBtn" onclick="saveQuickShift()">שמירה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FULL SHIFT MODAL -->
+<div class="overlay" id="shiftOverlay" onclick="closeOverlay('shiftOverlay',event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="shiftModalTitle">הוספת משמרת</div>
+    <input type="hidden" id="shiftEditId">
+    <div class="section-label">חברה</div>
+    <div class="company-grid" id="shiftCompanyGrid"></div>
+    <div class="section-label">פרטים כלליים</div>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך</label><input type="date" id="shiftDate"></div>
+      <div class="form-group"><label>שם האירוע</label><input type="text" id="shiftEvent" placeholder="אופציונלי"></div>
+    </div>
+    <div class="form-group"><label>מיקום</label><input type="text" id="shiftLocation" placeholder="אופציונלי"></div>
+    <div class="section-label">שעות</div>
+    <div class="form-row">
+      <div class="form-group"><label>יציאה מהבית</label><input type="time" id="shiftLeftHome" oninput="recalcShift()"></div>
+      <div class="form-group"><label>התחלת עבודה</label><input type="time" id="shiftWorkStart" oninput="recalcShift()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>סיום עבודה</label><input type="time" id="shiftWorkEnd" oninput="recalcShift()"></div>
+      <div class="form-group"><label>חזרה הביתה</label><input type="time" id="shiftReturnHome" oninput="recalcShift()"></div>
+    </div>
+    <div class="section-label">תשלום</div>
+    <div class="form-row">
+      <div class="form-group"><label>החזר דלק (₪)</label><input type="number" id="shiftFuel" placeholder="0" min="0" oninput="recalcShift()"></div>
+      <div class="form-group"><label>הוצאות נוספות (₪)</label><input type="number" id="shiftExpenses" placeholder="0" min="0" oninput="recalcShift()"></div>
+    </div>
+    <div class="form-group" id="shiftManualOTGroup" style="display:none">
+      <label>תוספת ידנית (₪)</label>
+      <input type="number" id="shiftManualOT" placeholder="0" min="0" oninput="recalcShift()">
+    </div>
+    <div class="pay-preview">
+      <div class="pay-label">סיכום תשלום</div>
+      <div class="pay-amount" id="shiftTotalAmt">₪0</div>
+      <div class="pay-breakdown" id="shiftBreakdown"></div>
+    </div>
+    <div class="form-group"><label>הערות</label><textarea id="shiftNotes" placeholder="הוסף הערה..."></textarea></div>
+    <div class="gap-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeOverlay('shiftOverlay')">ביטול</button>
+      <button class="btn btn-primary" style="flex:2" id="shiftSaveBtn" onclick="saveShift()">שמירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPANY MODAL -->
+<div class="overlay" id="companyOverlay" onclick="closeOverlay('companyOverlay',event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="companyModalTitle">הוספת חברה</div>
+    <input type="hidden" id="companyEditId">
+    <div class="form-group"><label>שם חברה *</label><input type="text" id="companyName" placeholder="שם החברה"></div>
+    <div class="form-row">
+      <div class="form-group"><label>איש קשר</label><input type="text" id="companyContact" placeholder="שם"></div>
+      <div class="form-group"><label>טלפון</label><input type="tel" id="companyPhone" placeholder="05x-xxxxxxx"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>תעריף יומי (₪) *</label><input type="number" id="companyRate" placeholder="0" min="0"></div>
+      <div class="form-group"><label>שעות כלולות</label><input type="number" id="companyIncludedHours" placeholder="12" min="1" max="24"></div>
+    </div>
+    <div class="form-group">
+      <label>החזר דלק קבוע (₪)</label>
+      <input type="number" id="companyFuel" placeholder="0" min="0">
+      <div class="form-note">יוזן אוטומטית בכל משמרת</div>
+    </div>
+    <div class="form-group">
+      <label>סוג חישוב שעות נוספות</label>
+      <div class="radio-group">
+        <label class="radio-option"><input type="radio" name="compOT" value="none" checked><div><div class="radio-label">ללא שעות נוספות</div><div class="radio-desc">תשלום קבוע לפי תעריף יומי</div></div></label>
+        <label class="radio-option"><input type="radio" name="compOT" value="typeA"><div><div class="radio-label">סוג א׳ — 10% לשעה</div><div class="radio-desc">כל שעה מעבר ל-X שעות = 10% מהתעריף</div></div></label>
+        <label class="radio-option"><input type="radio" name="compOT" value="typeB"><div><div class="radio-label">סוג ב׳ — ×1.5 / ×2</div><div class="radio-desc">עד X שעות = רגיל. עד 18ש׳ = ×1.5. מעל 18ש׳ = ×2</div></div></label>
+        <label class="radio-option"><input type="radio" name="compOT" value="manual"><div><div class="radio-label">סוג ד׳ — הזנה ידנית</div><div class="radio-desc">הזן תוספת תשלום ידנית בכל משמרת</div></div></label>
+      </div>
+    </div>
+    <div class="form-group"><label>הערות</label><textarea id="companyNotes" placeholder="הערות..."></textarea></div>
+    <div class="gap-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeOverlay('companyOverlay')">ביטול</button>
+      <button class="btn btn-primary" style="flex:2" id="companySaveBtn" onclick="saveCompany()">שמירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="overlay" id="paymentOverlay" onclick="closeOverlay('paymentOverlay',event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">פרטי תשלום</div>
+    <input type="hidden" id="payEditShiftId">
+    <div id="payShiftSummary"></div>
+    <div class="section-label">חשבונית / קבלה</div>
+    <div class="form-group">
+      <label>הוצאה קבלה/חשבונית?</label>
+      <select id="payIssued" onchange="toggleIssuedFields()">
+        <option value="no">לא הוצאה</option>
+        <option value="yes">כן, הוצאה</option>
+      </select>
+    </div>
+    <div id="payIssuedFields" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>מספר קבלה/חשבונית</label><input type="text" id="payInvoiceNum" placeholder="מספר"></div>
+        <div class="form-group"><label>תאריך הוצאה</label><input type="date" id="payInvoiceDate"></div>
+      </div>
+    </div>
+    <div class="section-label">תשלום</div>
+    <div class="form-group">
+      <label>שולם?</label>
+      <select id="payPaid" onchange="togglePayFields()">
+        <option value="no">לא שולם</option>
+        <option value="yes">כן, שולם</option>
+      </select>
+    </div>
+    <div id="payPaidFields" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>תאריך תשלום</label><input type="date" id="payDate"></div>
+        <div class="form-group">
+          <label>אמצעי תשלום</label>
+          <select id="payMethod">
+            <option value="">בחר...</option>
+            <option value="bit">ביט</option>
+            <option value="transfer">העברה בנקאית</option>
+            <option value="cash">מזומן</option>
+            <option value="check">שיק</option>
+            <option value="other">אחר</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label>הערות</label><textarea id="payNotes" placeholder="הערות תשלום..."></textarea></div>
+    <div class="gap-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeOverlay('paymentOverlay')">ביטול</button>
+      <button class="btn btn-primary" style="flex:2" id="paySaveBtn" onclick="savePayment()">שמירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="overlay" id="confirmOverlay" onclick="closeOverlay('confirmOverlay',event)">
+  <div class="sheet" onclick="event.stopPropagation()" style="border-radius:16px;margin:16px">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="confirmTitle">אישור</div>
+    <p id="confirmMsg" style="color:var(--muted);font-size:14px;margin-bottom:18px"></p>
+    <div class="gap-row">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeOverlay('confirmOverlay')">ביטול</button>
+      <button class="btn btn-danger" style="flex:2" id="confirmOkBtn">מחיקה</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════
+const SUPABASE_URL = 'https://vxmzmaumzqwkuflbaiwx.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_oMJwnjZvRDftIRvR3Wav_g_NW1up-aF'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ════════════════════════════════════
+// STATE
+// ════════════════════════════════════
+let CU = null
+let D = { companies: [], shifts: [] }
+let shiftSelCompany = null
+let qsSelCompany = null
+let currentPayTab = 'unpaid'
+let currentReportTab = 'monthly'
+let shiftsFilter = 'all'
+
+// ════════════════════════════════════
+// INIT
+// ════════════════════════════════════
+async function init() {
+  const { data: { session } } = await sb.auth.getSession()
+  if (session) {
+    CU = session.user
+    await loadData()
+    showApp()
+  } else {
+    document.getElementById('loadingScreen').classList.add('hidden')
+    showAuthSection()
+  }
+}
+init()
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') { CU = null; D = { companies: [], shifts: [] }; showAuthSection(); showLogin(); }
+})
+
+// ════════════════════════════════════
+// AUTH
+// ════════════════════════════════════
+function showAuthSection() { document.getElementById('authSection').style.display = ''; document.getElementById('appSection').style.display = 'none' }
+function showLogin() { document.getElementById('loginPage').style.display = ''; document.getElementById('registerPage').style.display = 'none'; hide('loginError') }
+function showRegister() { document.getElementById('loginPage').style.display = 'none'; document.getElementById('registerPage').style.display = ''; hide('regError') }
+
+async function doLogin() {
+  const email = val('loginEmail').trim(), pass = val('loginPass')
+  if (!email || !pass) { showErr('loginError', 'נא למלא אימייל וסיסמה'); return }
+  setBtnLoading('loginBtn', true)
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass })
+  setBtnLoading('loginBtn', false)
+  if (error) { showErr('loginError', 'אימייל או סיסמה שגויים'); return }
+  CU = data.user
+  await loadData()
+  showApp()
+}
+
+async function doRegister() {
+  const name = val('regName').trim(), email = val('regEmail').trim()
+  const pass = val('regPass'), pass2 = val('regPass2')
+  if (!name || !email || !pass) { showErr('regError', 'נא למלא את כל השדות'); return }
+  if (pass !== pass2) { showErr('regError', 'הסיסמאות אינן תואמות'); return }
+  if (pass.length < 6) { showErr('regError', 'סיסמה חייבת לפחות 6 תווים'); return }
+  setBtnLoading('regBtn', true)
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { name } } })
+  setBtnLoading('regBtn', false)
+  if (error) { showErr('regError', 'שגיאה: ' + error.message); return }
+  if (!data.session) { showErr('regError', 'נשלח אימייל אישור — בדוק את תיבת הדואר ואז התחבר'); return }
+  CU = data.user
+  D = { companies: [], shifts: [] }
+  showApp()
+}
+
+async function doLogout() {
+  await sb.auth.signOut()
+}
+
+function showApp() {
+  document.getElementById('loadingScreen').classList.add('hidden')
+  document.getElementById('authSection').style.display = 'none'
+  document.getElementById('appSection').style.display = ''
+  const name = CU?.user_metadata?.name || CU?.email || ''
+  document.getElementById('headerUser').textContent = name
+  showPage('dashboard')
+}
+
+// ════════════════════════════════════
+// DATA
+// ════════════════════════════════════
+async function loadData() {
+  const [{ data: companies }, { data: shifts }] = await Promise.all([
+    sb.from('companies').select('*').order('created_at'),
+    sb.from('shifts').select('*').order('date', { ascending: false })
+  ])
+  D.companies = companies || []
+  D.shifts = shifts || []
+}
+
+// ════════════════════════════════════
+// UTILS
+// ════════════════════════════════════
+function val(id) { return document.getElementById(id).value }
+function setVal(id, v) { document.getElementById(id).value = v ?? '' }
+function show(id) { document.getElementById(id).style.display = '' }
+function hide(id) { document.getElementById(id).style.display = 'none' }
+function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block' }
+function setBtnLoading(id, loading) { const btn = document.getElementById(id); btn.disabled = loading; btn.textContent = loading ? 'רגע...' : btn.dataset.label || btn.textContent }
+function fmtMoney(n) { return '₪' + (Math.round(n) || 0).toLocaleString('he-IL') }
+function fmtDate(d) { if (!d) return ''; const [y, m, day] = d.split('-'); return `${day}/${m}/${y}` }
+function fmtH(h) { if (!h) return '0ש׳'; const w = Math.floor(h); const m = Math.round((h - w) * 60); return m > 0 ? `${w}:${String(m).padStart(2,'0')}ש׳` : `${w}ש׳` }
+function today() { return new Date().toISOString().slice(0, 10) }
+function nowTime() { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` }
+function getCompany(id) { return D.companies.find(c => c.id === id) }
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
+
+function timeDiff(start, end) {
+  if (!start || !end) return 0
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let s = sh * 60 + sm, e = eh * 60 + em
+  if (e <= s) e += 1440
+  return (e - s) / 60
+}
+
+// ════════════════════════════════════
+// PAY CALCULATION
+// ════════════════════════════════════
+function calcPay(company, workHours, manualOT) {
+  const rate = company.daily_rate || 0
+  const inc = company.included_hours || 12
+  const ot = company.overtime_type || 'none'
+  let base = rate, extra = 0, breakdown = []
+  breakdown.push(`תעריף בסיס: ${fmtMoney(rate)}`)
+
+  if (ot === 'typeA') {
+    const otH = Math.max(0, workHours - inc)
+    extra = otH * rate * 0.1
+    if (otH > 0) breakdown.push(`${fmtH(otH)} שעות נוספות × 10% = ${fmtMoney(extra)}`)
+  } else if (ot === 'typeB') {
+    if (workHours > inc && workHours <= 18) { base = rate * 1.5; breakdown.push(`${fmtH(workHours)} שעות → ×1.5 = ${fmtMoney(base)}`) }
+    else if (workHours > 18) { base = rate * 2; breakdown.push(`${fmtH(workHours)} שעות → ×2 = ${fmtMoney(base)}`) }
+  } else if (ot === 'manual') {
+    extra = parseFloat(manualOT) || 0
+    if (extra > 0) breakdown.push(`תוספת ידנית: ${fmtMoney(extra)}`)
+  }
+  return { pay: base + extra, base, extra, breakdown }
+}
+
+function calcShiftIncome(shift) {
+  const co = getCompany(shift.company_id)
+  if (!co) return { totalIncome: 0, netIncome: 0, base: 0, extra: 0, breakdown: [] }
+  const { pay, base, extra, breakdown } = calcPay(co, shift.work_hours || 0, shift.manual_ot || 0)
+  const fuel = shift.fuel_reimbursement || 0
+  const expenses = shift.extra_expenses || 0
+  if (fuel > 0) breakdown.push(`דלק: ${fmtMoney(fuel)}`)
+  if (expenses > 0) breakdown.push(`הוצאות: -${fmtMoney(expenses)}`)
+  return { totalIncome: pay + fuel, netIncome: pay + fuel - expenses, base, extra, breakdown }
+}
+
+// ════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════
+function showPage(page) {
+  ['dashboard','shifts','companies','payments','reports'].forEach(p => {
+    document.getElementById('page' + cap(p)).classList.toggle('active', p === page)
+    document.getElementById('nav-' + p).classList.toggle('active', p === page)
+  })
+  document.getElementById('fabBtn').classList.toggle('hidden', page !== 'dashboard')
+  if (page === 'dashboard') renderDashboard()
+  if (page === 'shifts') renderShifts()
+  if (page === 'companies') renderCompanies()
+  if (page === 'payments') { currentPayTab = 'unpaid'; renderPayTabs(); renderPayments() }
+  if (page === 'reports') { currentReportTab = 'monthly'; renderReportTabs(); renderReports() }
+}
+
+// ════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════
+function renderDashboard() {
+  const now = new Date()
+  const month = now.getMonth(), year = now.getFullYear()
+  const monthShifts = D.shifts.filter(s => { const d = new Date(s.date); return d.getMonth() === month && d.getFullYear() === year })
+  const yearShifts = D.shifts.filter(s => new Date(s.date).getFullYear() === year)
+  const unpaidShifts = D.shifts.filter(s => !s.paid)
+
+  const monthIncome = monthShifts.reduce((a, s) => a + calcShiftIncome(s).totalIncome, 0)
+  const yearIncome = yearShifts.reduce((a, s) => a + calcShiftIncome(s).totalIncome, 0)
+  const unpaidAmt = unpaidShifts.reduce((a, s) => a + calcShiftIncome(s).totalIncome, 0)
+  const monthHours = monthShifts.reduce((a, s) => a + (s.work_hours || 0), 0)
+  const monthAway = monthShifts.reduce((a, s) => a + (s.away_hours || 0), 0)
+  const noInvoice = D.shifts.filter(s => !s.invoice_issued).length
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="s-label">הכנסה החודש</div><div class="s-value green">${fmtMoney(monthIncome)}</div></div>
+    <div class="stat-card"><div class="s-label">חוב פתוח</div><div class="s-value red">${fmtMoney(unpaidAmt)}</div></div>
+    <div class="stat-card"><div class="s-label">ימי עבודה החודש</div><div class="s-value">${monthShifts.length}</div></div>
+    <div class="stat-card"><div class="s-label">ימי עבודה השנה</div><div class="s-value">${yearShifts.length}</div></div>
+    <div class="stat-card"><div class="s-label">שעות עבודה החודש</div><div class="s-value">${fmtH(monthHours)}</div></div>
+    <div class="stat-card"><div class="s-label">שעות מחוץ לבית</div><div class="s-value">${fmtH(monthAway)}</div></div>
+    <div class="stat-card"><div class="s-label">הכנסה השנה</div><div class="s-value green">${fmtMoney(yearIncome)}</div></div>
+    <div class="stat-card"><div class="s-label">ללא קבלה/חשבונית</div><div class="s-value ${noInvoice > 0 ? 'red' : ''}">${noInvoice} משמרות</div></div>
+  `
+
+  const owedByCompany = {}
+  unpaidShifts.forEach(s => {
+    const co = getCompany(s.company_id); if (!co) return
+    if (!owedByCompany[co.id]) owedByCompany[co.id] = { name: co.name, amount: 0, count: 0, oldest: s.date }
+    owedByCompany[co.id].amount += calcShiftIncome(s).totalIncome
+    owedByCompany[co.id].count++
+    if (s.date < owedByCompany[co.id].oldest) owedByCompany[co.id].oldest = s.date
+  })
+  const owedList = Object.values(owedByCompany).sort((a, b) => b.amount - a.amount)
+  const owedEl = document.getElementById('owedSection')
+  if (owedList.length) {
+    owedEl.innerHTML = `<div style="font-size:15px;font-weight:700;margin-bottom:10px;color:var(--danger)">💰 מי חייב לי כסף</div>` +
+      owedList.map(o => `<div class="owed-card" onclick="showPage('payments')">
+        <div class="card-row"><div class="owed-company">${o.name}</div><div class="owed-amount">${fmtMoney(o.amount)}</div></div>
+        <div class="owed-detail">${o.count} משמרות · הישנה ביותר: ${fmtDate(o.oldest)}</div>
+      </div>`).join('') + `<div style="margin-bottom:16px"></div>`
+  } else owedEl.innerHTML = ''
+
+  const recent = D.shifts.slice(0, 5)
+  const recEl = document.getElementById('recentShiftsList')
+  if (!recent.length) {
+    recEl.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><p>עדיין אין משמרות</p><button class="btn btn-primary" style="max-width:200px;margin:0 auto" onclick="openQuickShift()">הוסף משמרת ראשונה</button></div>`
+    return
+  }
+  recEl.innerHTML = recent.map(s => {
+    const co = getCompany(s.company_id)
+    const inc = calcShiftIncome(s)
+    return `<div class="card">
+      <div class="card-row">
+        <div style="flex:1">
+          <div class="card-title">${co ? co.name : '—'}</div>
+          <div class="card-sub">${fmtDate(s.date)}${s.event_name ? ' · ' + s.event_name : ''}${s.work_hours ? ' · ' + fmtH(s.work_hours) : ''}</div>
+        </div>
+        <div style="text-align:left">
+          <div class="card-amount">${fmtMoney(inc.totalIncome)}</div>
+          <div style="margin-top:4px">${s.paid ? `<span class="badge badge-green">שולם</span>` : `<span class="badge badge-red">לא שולם</span>`}</div>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+// ════════════════════════════════════
+// SHIFTS
+// ════════════════════════════════════
+function renderShifts() {
+  const filterBar = document.getElementById('shiftsFilterBar')
+  const months = [...new Set(D.shifts.map(s => s.date.slice(0, 7)))].sort().reverse()
+  const heM = ['ינו','פבר','מרץ','אפר','מאי','יוני','יולי','אוג','ספט','אוק','נוב','דצמ']
+  filterBar.innerHTML = `<button class="filter-btn ${shiftsFilter==='all'?'active':''}" onclick="setShiftsFilter('all')">הכל</button>` +
+    months.slice(0,6).map(m => { const[y,mo]=m.split('-'); return `<button class="filter-btn ${shiftsFilter===m?'active':''}" onclick="setShiftsFilter('${m}')">${heM[parseInt(mo)-1]} ${y}</button>` }).join('')
+
+  let shifts = [...D.shifts]
+  if (shiftsFilter !== 'all') shifts = shifts.filter(s => s.date.startsWith(shiftsFilter))
+
+  const el = document.getElementById('shiftsList')
+  if (!shifts.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">⏱</div><p>אין משמרות</p></div>`; return }
+  el.innerHTML = shifts.map(s => {
+    const co = getCompany(s.company_id)
+    const inc = calcShiftIncome(s)
+    return `<div class="card">
+      <div class="card-row">
+        <div style="flex:1">
+          <div class="card-title">${co ? co.name : '—'}</div>
+          <div class="card-sub">${fmtDate(s.date)}${s.event_name ? ' · ' + s.event_name : ''}${s.location ? ' · ' + s.location : ''}</div>
+          ${s.work_hours ? `<div class="card-sub">עבודה: ${fmtH(s.work_hours)}${s.away_hours ? ' | מחוץ לבית: ' + fmtH(s.away_hours) : ''}</div>` : ''}
+        </div>
+        <div style="text-align:left">
+          <div class="card-amount">${fmtMoney(inc.totalIncome)}</div>
+          <div style="margin-top:4px;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+            ${s.paid ? `<span class="badge badge-green">שולם</span>` : `<span class="badge badge-red">לא שולם</span>`}
+            ${s.invoice_issued ? `<span class="badge badge-blue">חשבונית</span>` : `<span class="badge badge-gray">ללא חשבונית</span>`}
+          </div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openShiftModal('${s.id}')">ערוך</button>
+        <button class="btn btn-info btn-sm" onclick="openPaymentModal('${s.id}')">תשלום</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDel('shift','${s.id}')">מחק</button>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function setShiftsFilter(f) { shiftsFilter = f; renderShifts() }
+
+function openShiftModal(editId) {
+  shiftSelCompany = null
+  setVal('shiftEditId', ''); setVal('shiftDate', today()); setVal('shiftEvent', '')
+  setVal('shiftLocation', ''); setVal('shiftLeftHome', ''); setVal('shiftWorkStart', '')
+  setVal('shiftWorkEnd', ''); setVal('shiftReturnHome', ''); setVal('shiftFuel', '')
+  setVal('shiftExpenses', ''); setVal('shiftManualOT', ''); setVal('shiftNotes', '')
+  hide('shiftManualOTGroup')
+  document.getElementById('shiftModalTitle').textContent = 'הוספת משמרת'
+
+  if (editId) {
+    const s = D.shifts.find(x => x.id === editId); if (!s) return
+    document.getElementById('shiftModalTitle').textContent = 'עריכת משמרת'
+    setVal('shiftEditId', editId); setVal('shiftDate', s.date); setVal('shiftEvent', s.event_name)
+    setVal('shiftLocation', s.location); setVal('shiftLeftHome', s.left_home_time); setVal('shiftWorkStart', s.work_start_time)
+    setVal('shiftWorkEnd', s.work_end_time); setVal('shiftReturnHome', s.returned_home_time)
+    setVal('shiftFuel', s.fuel_reimbursement || ''); setVal('shiftExpenses', s.extra_expenses || '')
+    setVal('shiftManualOT', s.manual_ot || ''); setVal('shiftNotes', s.notes)
+    shiftSelCompany = s.company_id
+    const co = getCompany(s.company_id)
+    if (co?.overtime_type === 'manual') show('shiftManualOTGroup')
+  }
+  renderShiftCompanyGrid(); recalcShift()
+  document.getElementById('shiftOverlay').classList.add('active')
+}
+
+function renderShiftCompanyGrid() {
+  const el = document.getElementById('shiftCompanyGrid')
+  if (!D.companies.length) { el.innerHTML = `<div style="grid-column:span 2;color:var(--muted);font-size:13px">אין חברות. <a onclick="closeOverlay('shiftOverlay');openCompanyModal();" style="color:var(--accent);cursor:pointer">הוסף חברה תחילה</a></div>`; return }
+  el.innerHTML = D.companies.map(c => `<button class="company-btn ${shiftSelCompany === c.id ? 'selected' : ''}" onclick="selectShiftCompany('${c.id}')">${c.name}</button>`).join('')
+}
+
+function selectShiftCompany(id) {
+  shiftSelCompany = id; renderShiftCompanyGrid()
+  const co = getCompany(id)
+  document.getElementById('shiftManualOTGroup').style.display = co?.overtime_type === 'manual' ? '' : 'none'
+  if (co?.fuel_reimbursement && !val('shiftFuel')) setVal('shiftFuel', co.fuel_reimbursement)
+  recalcShift()
+}
+
+function recalcShift() {
+  const ws = val('shiftWorkStart'), we = val('shiftWorkEnd')
+  const lh = val('shiftLeftHome'), rh = val('shiftReturnHome')
+  const workH = timeDiff(ws, we), awayH = timeDiff(lh, rh) || workH
+  if (!shiftSelCompany) { document.getElementById('shiftTotalAmt').textContent = '₪0'; document.getElementById('shiftBreakdown').textContent = ''; return }
+  const co = getCompany(shiftSelCompany); if (!co) return
+  const fuel = parseFloat(val('shiftFuel')) || 0
+  const expenses = parseFloat(val('shiftExpenses')) || 0
+  const manualOT = parseFloat(val('shiftManualOT')) || 0
+  const { pay, breakdown } = calcPay(co, workH, manualOT)
+  const total = pay + fuel
+  document.getElementById('shiftTotalAmt').textContent = fmtMoney(total)
+  document.getElementById('shiftBreakdown').innerHTML = breakdown.join('<br>') +
+    (expenses > 0 ? `<br>הוצאות: -${fmtMoney(expenses)}<br><strong>נטו: ${fmtMoney(total - expenses)}</strong>` : '') +
+    (workH > 0 ? `<br>שעות עבודה: ${fmtH(workH)}` : '')
+}
+
+async function saveShift() {
+  if (!shiftSelCompany) { alert('נא לבחור חברה'); return }
+  const date = val('shiftDate'); if (!date) { alert('נא לבחור תאריך'); return }
+  const ws = val('shiftWorkStart'), we = val('shiftWorkEnd'), lh = val('shiftLeftHome'), rh = val('shiftReturnHome')
+  const co = getCompany(shiftSelCompany)
+  const fuel = parseFloat(val('shiftFuel')) || co?.fuel_reimbursement || 0
+
+  const shiftData = {
+    company_id: shiftSelCompany, date,
+    event_name: val('shiftEvent'), location: val('shiftLocation'),
+    left_home_time: lh, work_start_time: ws, work_end_time: we, returned_home_time: rh,
+    work_hours: timeDiff(ws, we), away_hours: timeDiff(lh, rh) || timeDiff(ws, we),
+    fuel_reimbursement: fuel, extra_expenses: parseFloat(val('shiftExpenses')) || 0,
+    manual_ot: parseFloat(val('shiftManualOT')) || 0, notes: val('shiftNotes')
+  }
+
+  setBtnLoading('shiftSaveBtn', true)
+  const editId = val('shiftEditId')
+  if (editId) {
+    const { error } = await sb.from('shifts').update(shiftData).eq('id', editId)
+    if (error) { alert('שגיאה בשמירה'); setBtnLoading('shiftSaveBtn', false); return }
+    const idx = D.shifts.findIndex(x => x.id === editId)
+    D.shifts[idx] = { ...D.shifts[idx], ...shiftData }
+  } else {
+    shiftData.user_id = CU.id
+    const { data, error } = await sb.from('shifts').insert(shiftData).select().single()
+    if (error) { alert('שגיאה בשמירה'); setBtnLoading('shiftSaveBtn', false); return }
+    D.shifts.unshift(data)
+  }
+  setBtnLoading('shiftSaveBtn', false)
+  closeOverlay('shiftOverlay'); renderShifts()
+  if (document.getElementById('pageDashboard').classList.contains('active')) renderDashboard()
+}
+
+// ════════════════════════════════════
+// QUICK SHIFT
+// ════════════════════════════════════
+function openQuickShift() {
+  if (!D.companies.length) { if (confirm('אין חברות מוגדרות. להוסיף חברה?')) { showPage('companies'); setTimeout(openCompanyModal, 100) }; return }
+  qsSelCompany = null; setVal('qsDate', today()); setVal('qsStart', nowTime()); setVal('qsEnd', ''); setVal('qsFuel', '')
+  renderQsGrid(); setQsStep(1)
+  document.getElementById('qsOverlay').classList.add('active')
+}
+
+function renderQsGrid() { document.getElementById('qsGrid').innerHTML = D.companies.map(c => `<button class="company-btn" onclick="selectQsCompany('${c.id}')">${c.name}</button>`).join('') }
+
+function selectQsCompany(id) {
+  qsSelCompany = id
+  const co = getCompany(id)
+  document.getElementById('qsCompanyBadge').innerHTML = `<span class="badge badge-green" style="font-size:13px;padding:5px 12px">${co.name}</span>`
+  if (co.fuel_reimbursement) setVal('qsFuel', co.fuel_reimbursement)
+  updateQsPreview(); setQsStep(2)
+}
+
+function updateQsPreview() {
+  if (!qsSelCompany) return
+  const co = getCompany(qsSelCompany)
+  const wh = timeDiff(val('qsStart'), val('qsEnd'))
+  const fuel = parseFloat(val('qsFuel')) || 0
+  const { pay, breakdown } = calcPay(co, wh, 0)
+  document.getElementById('qsPayAmt').textContent = fmtMoney(pay + fuel)
+  document.getElementById('qsBreakdown').innerHTML = breakdown.join('<br>') + (wh > 0 ? `<br>שעות: ${fmtH(wh)}` : '')
+}
+
+function setQsStep(n) {
+  document.getElementById('qsStep1').style.display = n === 1 ? '' : 'none'
+  document.getElementById('qsStep2').style.display = n === 2 ? '' : 'none'
+  document.getElementById('qd1').classList.toggle('active', n === 1)
+  document.getElementById('qd2').classList.toggle('active', n === 2)
+}
+function qsBack() { setQsStep(1) }
+
+async function saveQuickShift() {
+  if (!qsSelCompany) return
+  const date = val('qsDate'), ws = val('qsStart'), we = val('qsEnd')
+  const workH = timeDiff(ws, we)
+  const co = getCompany(qsSelCompany)
+  const fuel = parseFloat(val('qsFuel')) || co.fuel_reimbursement || 0
+  setBtnLoading('qsSaveBtn', true)
+  const shiftData = {
+    user_id: CU.id, company_id: qsSelCompany, date,
+    work_start_time: ws, work_end_time: we, work_hours: workH, away_hours: workH,
+    fuel_reimbursement: fuel, extra_expenses: 0, manual_ot: 0,
+    event_name: '', location: '', left_home_time: '', returned_home_time: '', notes: ''
+  }
+  const { data, error } = await sb.from('shifts').insert(shiftData).select().single()
+  setBtnLoading('qsSaveBtn', false)
+  if (error) { alert('שגיאה בשמירה'); return }
+  D.shifts.unshift(data)
+  closeOverlay('qsOverlay'); renderDashboard()
+}
+
+// ════════════════════════════════════
+// COMPANIES
+// ════════════════════════════════════
+function renderCompanies() {
+  const el = document.getElementById('companiesList')
+  if (!D.companies.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🏢</div><p>אין חברות עדיין</p><button class="btn btn-primary" style="max-width:200px;margin:0 auto" onclick="openCompanyModal()">הוסף חברה</button></div>`; return }
+  const otL = { none: 'ללא שעות נוספות', typeA: 'סוג א׳ — 10% לשעה', typeB: 'סוג ב׳ — ×1.5/×2', manual: 'הזנה ידנית' }
+  el.innerHTML = D.companies.map(c => {
+    const shiftCount = D.shifts.filter(s => s.company_id === c.id).length
+    const income = D.shifts.filter(s => s.company_id === c.id).reduce((a, s) => a + calcShiftIncome(s).totalIncome, 0)
+    return `<div class="card">
+      <div class="card-row"><div style="flex:1">
+        <div class="card-title">${c.name}</div>
+        <div class="card-sub">${fmtMoney(c.daily_rate)} ליום · ${c.included_hours || 12} שעות בסיס</div>
+        <div class="card-sub">${otL[c.overtime_type] || 'ללא שעות נוספות'}</div>
+        ${c.contact_name ? `<div class="card-sub">איש קשר: ${c.contact_name}${c.contact_phone ? ' | ' + c.contact_phone : ''}</div>` : ''}
+        <div class="card-sub">${shiftCount} משמרות · ${fmtMoney(income)}</div>
+      </div></div>
+      <div class="card-actions">
+        <button class="btn btn-secondary btn-sm" onclick="openCompanyModal('${c.id}')">עריכה</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDel('company','${c.id}')">מחיקה</button>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function openCompanyModal(editId) {
+  setVal('companyEditId', ''); setVal('companyName', ''); setVal('companyContact', ''); setVal('companyPhone', '')
+  setVal('companyRate', ''); setVal('companyIncludedHours', 12); setVal('companyFuel', ''); setVal('companyNotes', '')
+  document.querySelectorAll('input[name="compOT"]').forEach(r => r.checked = r.value === 'none')
+  document.getElementById('companyModalTitle').textContent = 'הוספת חברה'
+
+  if (editId) {
+    const c = D.companies.find(x => x.id === editId); if (!c) return
+    document.getElementById('companyModalTitle').textContent = 'עריכת חברה'
+    setVal('companyEditId', editId); setVal('companyName', c.name); setVal('companyContact', c.contact_name)
+    setVal('companyPhone', c.contact_phone); setVal('companyRate', c.daily_rate)
+    setVal('companyIncludedHours', c.included_hours || 12); setVal('companyFuel', c.fuel_reimbursement || ''); setVal('companyNotes', c.notes)
+    document.querySelectorAll('input[name="compOT"]').forEach(r => r.checked = r.value === c.overtime_type)
+  }
+  document.getElementById('companyOverlay').classList.add('active')
+}
+
+async function saveCompany() {
+  const name = val('companyName').trim(), rate = parseFloat(val('companyRate'))
+  if (!name) { alert('נא להזין שם חברה'); return }
+  if (isNaN(rate) || rate < 0) { alert('נא להזין תעריף תקין'); return }
+  const co = {
+    name, daily_rate: rate,
+    overtime_type: document.querySelector('input[name="compOT"]:checked').value,
+    included_hours: parseInt(val('companyIncludedHours')) || 12,
+    contact_name: val('companyContact'), contact_phone: val('companyPhone'),
+    fuel_reimbursement: parseFloat(val('companyFuel')) || 0, notes: val('companyNotes')
+  }
+  setBtnLoading('companySaveBtn', true)
+  const editId = val('companyEditId')
+  if (editId) {
+    const { error } = await sb.from('companies').update(co).eq('id', editId)
+    if (error) { alert('שגיאה בשמירה'); setBtnLoading('companySaveBtn', false); return }
+    const idx = D.companies.findIndex(x => x.id === editId)
+    D.companies[idx] = { ...D.companies[idx], ...co }
+  } else {
+    co.user_id = CU.id
+    const { data, error } = await sb.from('companies').insert(co).select().single()
+    if (error) { alert('שגיאה בשמירה'); setBtnLoading('companySaveBtn', false); return }
+    D.companies.push(data)
+  }
+  setBtnLoading('companySaveBtn', false)
+  closeOverlay('companyOverlay'); renderCompanies()
+}
+
+// ════════════════════════════════════
+// PAYMENTS
+// ════════════════════════════════════
+function renderPayTabs() {
+  document.getElementById('tabUnpaid').classList.toggle('active', currentPayTab === 'unpaid')
+  document.getElementById('tabPaid').classList.toggle('active', currentPayTab === 'paid')
+  document.getElementById('tabAll').classList.toggle('active', currentPayTab === 'all')
+}
+function setPayTab(t) { currentPayTab = t; renderPayTabs(); renderPayments() }
+
+function renderPayments() {
+  const el = document.getElementById('paymentsList')
+  let shifts = [...D.shifts]
+  if (currentPayTab === 'unpaid') shifts = shifts.filter(s => !s.paid)
+  if (currentPayTab === 'paid') shifts = shifts.filter(s => s.paid)
+
+  if (!shifts.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">💳</div><p>${currentPayTab === 'unpaid' ? 'כל המשמרות שולמו! 🎉' : 'אין תשלומים'}</p></div>`; return }
+
+  const byCompany = {}
+  shifts.forEach(s => {
+    const co = getCompany(s.company_id), key = co ? co.id : 'x'
+    if (!byCompany[key]) byCompany[key] = { name: co ? co.name : 'לא ידוע', shifts: [], total: 0 }
+    byCompany[key].shifts.push(s); byCompany[key].total += calcShiftIncome(s).totalIncome
+  })
+
+  const mL = { bit: 'ביט', transfer: 'העברה', cash: 'מזומן', check: 'שיק', other: 'אחר' }
+  el.innerHTML = Object.values(byCompany).map(g => `
+    <div class="report-section">
+      <h3>${g.name} — ${fmtMoney(g.total)}</h3>
+      ${g.shifts.map(s => {
+        const inc = calcShiftIncome(s)
+        return `<div class="card" style="margin-bottom:8px">
+          <div class="card-row">
+            <div style="flex:1">
+              <div class="card-title">${fmtDate(s.date)}${s.event_name ? ' · ' + s.event_name : ''}</div>
+              ${s.work_hours ? `<div class="card-sub">${fmtH(s.work_hours)} שעות עבודה</div>` : ''}
+              ${s.invoice_number ? `<div class="card-sub">חשבונית #${s.invoice_number}${s.invoice_date ? ' · ' + fmtDate(s.invoice_date) : ''}</div>` : ''}
+              ${s.paid && s.payment_date ? `<div class="card-sub">שולם ${fmtDate(s.payment_date)}${s.payment_method ? ' · ' + (mL[s.payment_method] || s.payment_method) : ''}</div>` : ''}
+            </div>
+            <div style="text-align:left">
+              <div class="card-amount">${fmtMoney(inc.totalIncome)}</div>
+              <div style="margin-top:4px">${s.paid ? `<span class="badge badge-green">שולם</span>` : `<span class="badge badge-red">לא שולם</span>`}</div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-${s.paid ? 'secondary' : 'primary'} btn-sm" onclick="quickTogglePaid('${s.id}')">${s.paid ? 'בטל תשלום' : '✓ סמן כשולם'}</button>
+            <button class="btn btn-secondary btn-sm" onclick="openPaymentModal('${s.id}')">פרטים</button>
+          </div>
+        </div>`
+      }).join('')}
+    </div>`).join('')
+}
+
+async function quickTogglePaid(id) {
+  const s = D.shifts.find(x => x.id === id); if (!s) return
+  const updates = { paid: !s.paid, payment_date: !s.paid ? today() : null }
+  const { error } = await sb.from('shifts').update(updates).eq('id', id)
+  if (error) { alert('שגיאה'); return }
+  Object.assign(s, updates)
+  renderPayments()
+  if (document.getElementById('pageDashboard').classList.contains('active')) renderDashboard()
+}
+
+function openPaymentModal(shiftId) {
+  const s = D.shifts.find(x => x.id === shiftId); if (!s) return
+  const co = getCompany(s.company_id)
+  const inc = calcShiftIncome(s)
+  setVal('payEditShiftId', shiftId)
+  document.getElementById('payShiftSummary').innerHTML = `
+    <div class="report-section" style="margin-bottom:14px">
+      <div class="report-row"><span>חברה</span><span>${co ? co.name : '—'}</span></div>
+      <div class="report-row"><span>תאריך</span><span>${fmtDate(s.date)}</span></div>
+      <div class="report-row highlight"><span>סכום</span><span>${fmtMoney(inc.totalIncome)}</span></div>
+    </div>`
+  setVal('payIssued', s.invoice_issued ? 'yes' : 'no')
+  document.getElementById('payIssuedFields').style.display = s.invoice_issued ? '' : 'none'
+  setVal('payInvoiceNum', s.invoice_number || ''); setVal('payInvoiceDate', s.invoice_date || '')
+  setVal('payPaid', s.paid ? 'yes' : 'no')
+  document.getElementById('payPaidFields').style.display = s.paid ? '' : 'none'
+  setVal('payDate', s.payment_date || ''); setVal('payMethod', s.payment_method || ''); setVal('payNotes', s.payment_notes || '')
+  document.getElementById('paymentOverlay').classList.add('active')
+}
+
+function toggleIssuedFields() { document.getElementById('payIssuedFields').style.display = val('payIssued') === 'yes' ? '' : 'none' }
+function togglePayFields() {
+  document.getElementById('payPaidFields').style.display = val('payPaid') === 'yes' ? '' : 'none'
+  if (val('payPaid') === 'yes' && !val('payDate')) setVal('payDate', today())
+}
+
+async function savePayment() {
+  const id = val('payEditShiftId')
+  const s = D.shifts.find(x => x.id === id); if (!s) return
+  const updates = {
+    invoice_issued: val('payIssued') === 'yes', invoice_number: val('payInvoiceNum'), invoice_date: val('payInvoiceDate') || null,
+    paid: val('payPaid') === 'yes', payment_date: val('payDate') || null, payment_method: val('payMethod'), payment_notes: val('payNotes')
+  }
+  setBtnLoading('paySaveBtn', true)
+  const { error } = await sb.from('shifts').update(updates).eq('id', id)
+  setBtnLoading('paySaveBtn', false)
+  if (error) { alert('שגיאה בשמירה'); return }
+  Object.assign(s, updates)
+  closeOverlay('paymentOverlay'); renderPayments()
+  if (document.getElementById('pageDashboard').classList.contains('active')) renderDashboard()
+  if (document.getElementById('pageShifts').classList.contains('active')) renderShifts()
+}
+
+// ════════════════════════════════════
+// REPORTS
+// ════════════════════════════════════
+function renderReportTabs() {
+  document.getElementById('tabMonthly').classList.toggle('active', currentReportTab === 'monthly')
+  document.getElementById('tabYearly').classList.toggle('active', currentReportTab === 'yearly')
+  document.getElementById('tabByCompany').classList.toggle('active', currentReportTab === 'company')
+}
+function setReportTab(t) { currentReportTab = t; renderReportTabs(); renderReports() }
+
+function renderReports() {
+  const el = document.getElementById('reportsContent')
+  if (!D.shifts.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>אין נתונים עדיין</p></div>`; return }
+  if (currentReportTab === 'monthly') el.innerHTML = buildMonthlyReport()
+  if (currentReportTab === 'yearly') el.innerHTML = buildYearlyReport()
+  if (currentReportTab === 'company') el.innerHTML = buildCompanyReport()
+}
+
+function buildMonthlyReport() {
+  const byMonth = {}
+  D.shifts.forEach(s => {
+    const m = s.date.slice(0, 7)
+    if (!byMonth[m]) byMonth[m] = { income: 0, hours: 0, away: 0, paid: 0, unpaid: 0, days: 0 }
+    const inc = calcShiftIncome(s)
+    byMonth[m].income += inc.totalIncome; byMonth[m].hours += s.work_hours || 0
+    byMonth[m].away += s.away_hours || 0; byMonth[m].days++
+    if (s.paid) byMonth[m].paid += inc.totalIncome; else byMonth[m].unpaid += inc.totalIncome
+  })
+  const heM = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+  return Object.keys(byMonth).sort().reverse().map(m => {
+    const d = byMonth[m], [y, mo] = m.split('-')
+    return `<div class="report-section"><h3>${heM[parseInt(mo)-1]} ${y}</h3>
+      <div class="report-row"><span>ימי עבודה</span><span>${d.days}</span></div>
+      <div class="report-row"><span>שעות עבודה</span><span>${fmtH(d.hours)}</span></div>
+      <div class="report-row"><span>שעות מחוץ לבית</span><span>${fmtH(d.away)}</span></div>
+      <div class="report-row highlight"><span>סה״כ הכנסה</span><span>${fmtMoney(d.income)}</span></div>
+      <div class="report-row"><span>שולם</span><span style="color:var(--accent-dark)">${fmtMoney(d.paid)}</span></div>
+      <div class="report-row"><span>לא שולם</span><span style="color:var(--danger)">${fmtMoney(d.unpaid)}</span></div>
+    </div>`
+  }).join('')
+}
+
+function buildYearlyReport() {
+  const byYear = {}
+  D.shifts.forEach(s => {
+    const y = s.date.slice(0, 4)
+    if (!byYear[y]) byYear[y] = { income: 0, hours: 0, days: 0, byMonth: {} }
+    const inc = calcShiftIncome(s); byYear[y].income += inc.totalIncome; byYear[y].hours += s.work_hours || 0; byYear[y].days++
+    const mo = parseInt(s.date.slice(5, 7)); byYear[y].byMonth[mo] = (byYear[y].byMonth[mo] || 0) + inc.totalIncome
+  })
+  const heM = ['ינו','פבר','מרץ','אפר','מאי','יוני','יולי','אוג','ספט','אוק','נוב','דצמ']
+  return Object.keys(byYear).sort().reverse().map(y => {
+    const d = byYear[y]
+    return `<div class="report-section"><h3>${y}</h3>
+      <div class="report-row highlight"><span>סה״כ הכנסה</span><span>${fmtMoney(d.income)}</span></div>
+      <div class="report-row"><span>ימי עבודה</span><span>${d.days}</span></div>
+      <div class="report-row"><span>שעות עבודה</span><span>${fmtH(d.hours)}</span></div>
+      <div class="report-row"><span>ממוצע ליום</span><span>${fmtMoney(d.days ? d.income / d.days : 0)}</span></div>
+      <div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">לפי חודשים</div>
+      ${Object.keys(d.byMonth).map(mo => `<div class="report-row"><span>${heM[parseInt(mo)-1]}</span><span>${fmtMoney(d.byMonth[mo])}</span></div>`).join('')}
+    </div>`
+  }).join('')
+}
+
+function buildCompanyReport() {
+  const byCompany = {}
+  D.shifts.forEach(s => {
+    const co = getCompany(s.company_id), key = co ? co.id : 'x'
+    if (!byCompany[key]) byCompany[key] = { name: co ? co.name : 'לא ידוע', income: 0, hours: 0, days: 0, unpaid: 0 }
+    const inc = calcShiftIncome(s); byCompany[key].income += inc.totalIncome; byCompany[key].hours += s.work_hours || 0; byCompany[key].days++
+    if (!s.paid) byCompany[key].unpaid += inc.totalIncome
+  })
+  return Object.values(byCompany).sort((a, b) => b.income - a.income).map(c => `
+    <div class="report-section"><h3>${c.name}</h3>
+      <div class="report-row highlight"><span>סה״כ הכנסה</span><span>${fmtMoney(c.income)}</span></div>
+      <div class="report-row"><span>ימי עבודה</span><span>${c.days}</span></div>
+      <div class="report-row"><span>שעות עבודה</span><span>${fmtH(c.hours)}</span></div>
+      <div class="report-row"><span>ממוצע ליום</span><span>${fmtMoney(c.days ? c.income / c.days : 0)}</span></div>
+      <div class="report-row"><span>חוב פתוח</span><span style="color:${c.unpaid > 0 ? 'var(--danger)' : 'var(--accent-dark)'}">${fmtMoney(c.unpaid)}</span></div>
+    </div>`).join('')
+}
+
+// ════════════════════════════════════
+// OVERLAYS / CONFIRM
+// ════════════════════════════════════
+function closeOverlay(id, e) { if (e && e.target.id !== id) return; document.getElementById(id).classList.remove('active') }
+
+function confirmDel(type, id) {
+  const msgs = { shift: 'למחוק משמרת זו? הפעולה אינה ניתנת לביטול.', company: 'למחוק חברה זו?' }
+  document.getElementById('confirmMsg').textContent = msgs[type] || ''
+  document.getElementById('confirmOkBtn').onclick = async () => {
+    if (type === 'shift') {
+      await sb.from('shifts').delete().eq('id', id)
+      D.shifts = D.shifts.filter(x => x.id !== id); renderShifts()
+    }
+    if (type === 'company') {
+      await sb.from('companies').delete().eq('id', id)
+      D.companies = D.companies.filter(x => x.id !== id); renderCompanies()
+    }
+    closeOverlay('confirmOverlay')
+    if (document.getElementById('pageDashboard').classList.contains('active')) renderDashboard()
+  }
+  document.getElementById('confirmOverlay').classList.add('active')
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+</script>
+</body>
+</html>
