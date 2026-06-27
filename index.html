@@ -57,6 +57,8 @@ body{font-family:system-ui,-apple-system,Arial,sans-serif;background:var(--bg);c
 .form-group textarea{resize:vertical;min-height:72px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-note{font-size:12px;color:var(--muted);margin-top:4px}
+.toggle-btn{padding:6px 18px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;cursor:pointer;transition:all .2s}
+.toggle-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* BUTTONS */
 .btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s}
@@ -380,8 +382,18 @@ input[type="time"]{font-size:16px}
     </div>
     <div class="section-label">תשלום</div>
     <div class="form-row">
-      <div class="form-group"><label>החזר דלק (₪)</label><input type="number" id="shiftFuel" placeholder="0" min="0" oninput="recalcShift()"></div>
-      <div class="form-group"><label>הוצאות נוספות (₪)</label><input type="number" id="shiftExpenses" placeholder="0" min="0" oninput="recalcShift()"></div>
+      <div class="form-group">
+        <label>קילומטרים</label>
+        <input type="number" id="shiftKm" placeholder="0" min="0" oninput="recalcShift()">
+        <div class="form-note" id="shiftFuelCalc" style="color:var(--accent)"></div>
+      </div>
+      <div class="form-group">
+        <label>תוספת על היום</label>
+        <div class="toggle-row">
+          <button type="button" class="toggle-btn" id="shiftBonusToggle" onclick="toggleDayBonus()">לא</button>
+        </div>
+        <input type="number" id="shiftBonus" placeholder="סכום ₪" min="0" oninput="recalcShift()" style="display:none;margin-top:6px">
+      </div>
     </div>
     <div class="form-group" id="shiftManualOTGroup" style="display:none">
       <label>תוספת ידנית (₪)</label>
@@ -798,8 +810,9 @@ function openShiftModal(editId) {
   shiftSelCompany = null
   setVal('shiftEditId', ''); setVal('shiftDate', today()); setVal('shiftEvent', '')
   setVal('shiftLocation', ''); setVal('shiftLeftHome', ''); setVal('shiftWorkStart', '')
-  setVal('shiftWorkEnd', ''); setVal('shiftReturnHome', ''); setVal('shiftFuel', '')
-  setVal('shiftExpenses', ''); setVal('shiftManualOT', ''); setVal('shiftNotes', '')
+  setVal('shiftWorkEnd', ''); setVal('shiftReturnHome', ''); setVal('shiftKm', '')
+  setVal('shiftBonus', ''); setVal('shiftManualOT', ''); setVal('shiftNotes', '')
+  resetDayBonus()
   hide('shiftManualOTGroup')
   document.getElementById('shiftModalTitle').textContent = 'הוספת משמרת'
 
@@ -809,7 +822,9 @@ function openShiftModal(editId) {
     setVal('shiftEditId', editId); setVal('shiftDate', s.date); setVal('shiftEvent', s.event_name)
     setVal('shiftLocation', s.location); setVal('shiftLeftHome', s.left_home_time); setVal('shiftWorkStart', s.work_start_time)
     setVal('shiftWorkEnd', s.work_end_time); setVal('shiftReturnHome', s.returned_home_time)
-    setVal('shiftFuel', s.fuel_reimbursement || ''); setVal('shiftExpenses', s.extra_expenses || '')
+    const kmVal = s.fuel_reimbursement ? Math.round(s.fuel_reimbursement / 1.5) : ''
+    setVal('shiftKm', kmVal)
+    if (s.extra_expenses) { setVal('shiftBonus', s.extra_expenses); setDayBonus(true) } else { resetDayBonus() }
     setVal('shiftManualOT', s.manual_ot || ''); setVal('shiftNotes', s.notes)
     shiftSelCompany = s.company_id
     const co = getCompany(s.company_id)
@@ -829,24 +844,41 @@ function selectShiftCompany(id) {
   shiftSelCompany = id; renderShiftCompanyGrid()
   const co = getCompany(id)
   document.getElementById('shiftManualOTGroup').style.display = co?.overtime_type === 'manual' ? '' : 'none'
-  if (co?.fuel_reimbursement && !val('shiftFuel')) setVal('shiftFuel', co.fuel_reimbursement)
   recalcShift()
 }
+
+function toggleDayBonus() {
+  const active = document.getElementById('shiftBonusToggle').classList.contains('on')
+  setDayBonus(!active)
+}
+function setDayBonus(on) {
+  const btn = document.getElementById('shiftBonusToggle')
+  const inp = document.getElementById('shiftBonus')
+  btn.textContent = on ? 'כן' : 'לא'
+  btn.classList.toggle('on', on)
+  inp.style.display = on ? '' : 'none'
+  if (!on) setVal('shiftBonus', '')
+  recalcShift()
+}
+function resetDayBonus() { setDayBonus(false) }
 
 function recalcShift() {
   const ws = val('shiftWorkStart'), we = val('shiftWorkEnd')
   const lh = val('shiftLeftHome'), rh = val('shiftReturnHome')
   const workH = timeDiff(ws, we), awayH = timeDiff(lh, rh) || workH
+  const km = parseFloat(val('shiftKm')) || 0
+  const fuel = km * 1.5
+  document.getElementById('shiftFuelCalc').textContent = km > 0 ? `החזר: ₪${fuel.toFixed(0)}` : ''
   if (!shiftSelCompany) { document.getElementById('shiftTotalAmt').textContent = '₪0'; document.getElementById('shiftBreakdown').textContent = ''; return }
   const co = getCompany(shiftSelCompany); if (!co) return
-  const fuel = parseFloat(val('shiftFuel')) || 0
-  const expenses = parseFloat(val('shiftExpenses')) || 0
+  const bonus = parseFloat(val('shiftBonus')) || 0
   const manualOT = parseFloat(val('shiftManualOT')) || 0
   const { pay, breakdown } = calcPay(co, workH, manualOT)
-  const total = pay + fuel
+  const total = pay + fuel + bonus
   document.getElementById('shiftTotalAmt').textContent = fmtMoney(total)
   document.getElementById('shiftBreakdown').innerHTML = breakdown.join('<br>') +
-    (expenses > 0 ? `<br>הוצאות: -${fmtMoney(expenses)}<br><strong>נטו: ${fmtMoney(total - expenses)}</strong>` : '') +
+    (fuel > 0 ? `<br>דלק (${km} ק״מ): ${fmtMoney(fuel)}` : '') +
+    (bonus > 0 ? `<br>תוספת על היום: ${fmtMoney(bonus)}` : '') +
     (workH > 0 ? `<br>שעות עבודה: ${fmtH(workH)}` : '')
 }
 
@@ -855,14 +887,15 @@ async function saveShift() {
   const date = val('shiftDate'); if (!date) { alert('נא לבחור תאריך'); return }
   const ws = val('shiftWorkStart'), we = val('shiftWorkEnd'), lh = val('shiftLeftHome'), rh = val('shiftReturnHome')
   const co = getCompany(shiftSelCompany)
-  const fuel = parseFloat(val('shiftFuel')) || co?.fuel_reimbursement || 0
+  const km = parseFloat(val('shiftKm')) || 0
+  const fuel = km * 1.5
 
   const shiftData = {
     company_id: shiftSelCompany, date,
     event_name: val('shiftEvent'), location: val('shiftLocation'),
     left_home_time: lh, work_start_time: ws, work_end_time: we, returned_home_time: rh,
     work_hours: timeDiff(ws, we), away_hours: timeDiff(lh, rh) || timeDiff(ws, we),
-    fuel_reimbursement: fuel, extra_expenses: parseFloat(val('shiftExpenses')) || 0,
+    fuel_reimbursement: fuel, extra_expenses: parseFloat(val('shiftBonus')) || 0,
     manual_ot: parseFloat(val('shiftManualOT')) || 0, notes: val('shiftNotes')
   }
 
