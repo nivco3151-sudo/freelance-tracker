@@ -1272,6 +1272,7 @@ function openCompanyShifts(companyId) {
         <div class="card-row">
           <div style="flex:1">
             <div class="card-title">${fmtDate(s.date)}${s.event_name ? ' · ' + s.event_name : ''}</div>
+            ${(s.work_hours || 0) > 12 ? `<div class="card-sub" style="color:var(--warning)">⚠️ משמרת ארוכה${s.work_start_time && s.work_end_time ? ' · ' + s.work_start_time + '–' + s.work_end_time : s.work_hours ? ' · ' + fmtH(s.work_hours) : ''}</div>` : ''}
             ${s.location ? `<div class="card-sub">📍 ${s.location}</div>` : ''}
             ${s.km ? `<div class="card-sub">🚗 ${s.km} ק"מ</div>` : ''}
             ${s.day_bonus ? `<div class="card-sub">🎁 בונוס: ${fmtMoney(s.day_bonus)}</div>` : ''}
