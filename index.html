@@ -1091,7 +1091,8 @@ function renderPayments() {
           <div class="card-row">
             <div style="flex:1">
               <div class="card-title">${fmtDate(s.date)}${s.event_name ? ' · ' + s.event_name : ''}</div>
-              ${s.work_hours ? `<div class="card-sub">${fmtH(s.work_hours)} שעות עבודה</div>` : ''}
+              ${s.work_hours ? `<div class="card-sub">${fmtH(s.work_hours)} שעות עבודה${s.location ? ' · ' + s.location : ''}</div>` : (s.location ? `<div class="card-sub">${s.location}</div>` : '')}
+              ${s.day_bonus ? `<div class="card-sub">בונוס: ${fmtMoney(s.day_bonus)}</div>` : ''}
               ${s.invoice_number ? `<div class="card-sub">חשבונית #${s.invoice_number}${s.invoice_date ? ' · ' + fmtDate(s.invoice_date) : ''}</div>` : ''}
               ${s.paid && s.payment_date ? `<div class="card-sub">שולם ${fmtDate(s.payment_date)}${s.payment_method ? ' · ' + (mL[s.payment_method] || s.payment_method) : ''}</div>` : ''}
             </div>
