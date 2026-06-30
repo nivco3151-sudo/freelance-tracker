@@ -1268,13 +1268,14 @@ function openCompanyShifts(companyId) {
   } else {
     el.innerHTML = shifts.map(s => {
       const inc = calcShiftIncome(s)
-      const bonus = s.extra_expenses || 0
       return `<div class="card">
         <div class="card-row">
           <div style="flex:1">
-            <div class="card-title">${fmtDate(s.date)}</div>
-            <div class="card-sub">${s.location ? '📍 ' + s.location : ''}</div>
-            <div class="card-sub">${s.work_hours ? '⏱ ' + fmtH(s.work_hours) : ''}${bonus > 0 ? ' · 🎁 בונוס ' + fmtMoney(bonus) : ''}</div>
+            <div class="card-title">${fmtDate(s.date)}${s.event_name ? ' · ' + s.event_name : ''}</div>
+            ${s.location ? `<div class="card-sub">📍 ${s.location}</div>` : ''}
+            ${s.km ? `<div class="card-sub">🚗 ${s.km} ק"מ</div>` : ''}
+            ${s.day_bonus ? `<div class="card-sub">🎁 בונוס: ${fmtMoney(s.day_bonus)}</div>` : ''}
+            ${s.notes ? `<div class="card-sub">📝 ${s.notes}</div>` : ''}
           </div>
           <div style="text-align:left">
             <div class="card-amount">${fmtMoney(inc.totalIncome)}</div>
