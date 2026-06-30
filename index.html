@@ -502,6 +502,15 @@ input[type="time"]{font-size:16px}
   </div>
 </div>
 
+<!-- COMPANY SHIFTS OVERLAY -->
+<div class="overlay" id="companyShiftsOverlay" onclick="closeOverlay('companyShiftsOverlay',event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="companyShiftsTitle"></div>
+    <div id="companyShiftsList"></div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div class="overlay" id="confirmOverlay" onclick="closeOverlay('confirmOverlay',event)">
   <div class="sheet" onclick="event.stopPropagation()" style="border-radius:16px;margin:16px">
@@ -995,6 +1004,7 @@ function renderCompanies() {
       </div></div>
       <div class="card-actions">
         <button class="btn btn-secondary btn-sm" onclick="openCompanyModal('${c.id}')">עריכה</button>
+        <button class="btn btn-info btn-sm" onclick="openCompanyShifts('${c.id}')">משמרות החודש</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDel('company','${c.id}')">מחיקה</button>
       </div>
     </div>`
@@ -1232,6 +1242,52 @@ function buildCompanyReport() {
       <div class="report-row"><span>ממוצע ליום</span><span>${fmtMoney(c.days ? c.income / c.days : 0)}</span></div>
       <div class="report-row"><span>חוב פתוח</span><span style="color:${c.unpaid > 0 ? 'var(--danger)' : 'var(--accent-dark)'}">${fmtMoney(c.unpaid)}</span></div>
     </div>`).join('')
+}
+
+// ════════════════════════════════════
+// COMPANY SHIFTS THIS MONTH
+// ════════════════════════════════════
+function openCompanyShifts(companyId) {
+  const co = getCompany(companyId)
+  if (!co) return
+  const now = new Date()
+  const month = now.getMonth(), year = now.getFullYear()
+  const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+  document.getElementById('companyShiftsTitle').textContent = `${co.name} — ${heMonths[month]} ${year}`
+
+  const shifts = D.shifts.filter(s => {
+    if (s.company_id !== companyId) return false
+    const d = new Date(s.date)
+    return d.getMonth() === month && d.getFullYear() === year
+  }).sort((a, b) => a.date.localeCompare(b.date))
+
+  const el = document.getElementById('companyShiftsList')
+  if (!shifts.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>אין משמרות החודש</p></div>`
+  } else {
+    el.innerHTML = shifts.map(s => {
+      const inc = calcShiftIncome(s)
+      const bonus = s.extra_expenses || 0
+      return `<div class="card">
+        <div class="card-row">
+          <div style="flex:1">
+            <div class="card-title">${fmtDate(s.date)}</div>
+            <div class="card-sub">${s.location ? '📍 ' + s.location : ''}</div>
+            <div class="card-sub">${s.work_hours ? '⏱ ' + fmtH(s.work_hours) : ''}${bonus > 0 ? ' · 🎁 בונוס ' + fmtMoney(bonus) : ''}</div>
+          </div>
+          <div style="text-align:left">
+            <div class="card-amount">${fmtMoney(inc.totalIncome)}</div>
+            <div style="margin-top:4px">${s.paid ? `<span class="badge badge-green">שולם</span>` : `<span class="badge badge-red">לא שולם</span>`}</div>
+          </div>
+        </div>
+      </div>`
+    }).join('') +
+    `<div class="report-section" style="margin-top:8px">
+      <div class="report-row highlight"><span>סה״כ החודש</span><span>${fmtMoney(shifts.reduce((a,s)=>a+calcShiftIncome(s).totalIncome,0))}</span></div>
+      <div class="report-row"><span>מספר משמרות</span><span>${shifts.length}</span></div>
+    </div>`
+  }
+  document.getElementById('companyShiftsOverlay').classList.add('active')
 }
 
 // ════════════════════════════════════
